@@ -38,6 +38,23 @@ int main(int argc, const char **argv) {
         return -1;
     }
 
-    std::cout << "Images: " << num_images << ", Rows: " << num_rows << ", Columns: " << num_cols << "\n";
+    size_t image_size = num_rows * num_cols;
+    std::vector<uint8_t> image(image_size);
+
+    if (fread(image.data(), 1, image_size, file) != image_size) {
+        std::cerr << "Failed to read image data.\n";
+        fclose(file);
+        return -1;
+    }
+
+    for (uint32_t r = 0; r < num_rows; r++) {
+        for (uint32_t c = 0; c < num_cols; c++) {
+            uint8_t pixel = image[r * num_cols + c];
+            std::cout << pixelToChar(pixel);
+        }
+        std::cout << "\n";
+    }
+
+    fclose(file);
 
 }
