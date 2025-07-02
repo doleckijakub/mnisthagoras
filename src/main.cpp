@@ -27,7 +27,7 @@ uint32_t readBigEndianUInt32(FILE* fp) {
 }
 
 uint8_t *readDataset(const char *dataset_filepath) {
-    FILE *fp = fopen("data/train-images-idx3-ubyte", "rb");
+    FILE *fp = fopen(dataset_filepath, "rb");
     uint8_t *data = nullptr;
 
     if (!fp) goto error;
@@ -55,8 +55,37 @@ uint8_t *readDataset(const char *dataset_filepath) {
 
 error:
 
+    perror("Error reading dataset");
     if (fp) fclose(fp);
     if (data) delete[] data;
+    return nullptr;
+}
+
+uint8_t *readLabels(const char *labels_filepath) {
+    FILE *fp = fopen(labels_filepath, "rb");
+    uint8_t *labels = nullptr;
+
+    if (!fp) goto error;
+
+    {
+        uint32_t magic_number = readBigEndianUInt32(fp);
+        uint32_t num_labels   = readBigEndianUInt32(fp);
+
+        if (magic_number != 2049) goto error;
+        if (num_labels != IMG_C) goto error;
+    }
+
+    labels = new uint8_t[IMG_C];
+    if (fread(labels, 1, IMG_C, fp) != IMG_C) goto error;
+
+    fclose(fp);
+    return labels;
+
+error:
+
+    perror("Error reading labels");
+    if (fp) fclose(fp);
+    if (labels) delete[] labels;
     return nullptr;
 }
 
@@ -64,12 +93,21 @@ int main(int argc, const char **argv) {
     uint8_t *dataset = readDataset("data/train-images-idx3-ubyte");
     if (!dataset) return 1;
 
-    for (uint32_t r = 0; r < 28; r++) {
-        for (uint32_t c = 0; c < 28; c++) {
-            uint8_t pixel = dataset[r * 28 + c];
-            printf("%c", pixelToChar(pixel));
+    uint8_t *labels = readLabels("data/train-labels-idx1-ubyte");
+    if (!labels) return 2;
+
+    for (int i = 0; i < IMG_C; i++) {
+        printf("%d", labels[i]);
+
+        for (uint32_t r = 0; r < 28; r++) {
+            for (uint32_t c = 0; c < 28; c++) {
+                uint8_t pixel = dataset[IMG_SIZE * i + r * 28 + c];
+                for (int i = 0; i < 2; i++) {
+                    printf("%c", pixelToChar(pixel));
+                }
+            }
+            printf("\n");
         }
-        printf("\n");
     }
 
     return 0;
